@@ -6,14 +6,14 @@ services:
     container_name: securegate-db
     environment:
       MYSQL_DATABASE: securegate_ai
-      MYSQL_ROOT_PASSWORD: Akram@123
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
     ports:
       - "3306:3306"
     volumes:
       - mysql_data:/var/lib/mysql
     restart: always
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-pAkram@123"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -33,14 +33,14 @@ services:
     environment:
       - SPRING_DATASOURCE_URL=jdbc:mysql://db:3306/securegate_ai?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
       - SPRING_DATASOURCE_USERNAME=root
-      - SPRING_DATASOURCE_PASSWORD=Akram@123
+      - SPRING_DATASOURCE_PASSWORD=${MYSQL_ROOT_PASSWORD}
       - SPRING_DATA_REDIS_HOST=redis
       - SPRING_DATA_REDIS_PORT=6379
       - SPRING_MAIL_HOST=smtp.gmail.com
       - SPRING_MAIL_PORT=587
-      - SPRING_MAIL_USERNAME=mastan8957@gmail.com
-      - SPRING_MAIL_PASSWORD=klkfmahfficjrnwo
-      - SECUREGATE_ALERT_RECIPIENT_EMAIL=mastan8957@gmail.com
+      - SPRING_MAIL_USERNAME=${SPRING_MAIL_USERNAME}
+      - SPRING_MAIL_PASSWORD=${SPRING_MAIL_PASSWORD}
+      - SECUREGATE_ALERT_RECIPIENT_EMAIL=${SECUREGATE_ALERT_RECIPIENT_EMAIL}
       - SECUREGATE_GEOIP_DATABASE-PATH=/app/GeoLite2-Country.mmdb
     depends_on:
       db:
