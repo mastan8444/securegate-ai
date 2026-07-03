@@ -1,0 +1,15 @@
+{
+  "manifest_version": 3,
+  "name": "SecureGate AI Admin Companion",
+  "version": "1.0.0",
+  "description": "Administrative extension to monitor and toggle threat policies for SecureGate AI Smart Gateway.",
+  "permissions": [
+    "storage"
+  ],
+  "action": {
+    "default_popup": "popup.html"
+  },
+  "host_permissions": [
+    "http://localhost:8080/*"
+  ]
+}

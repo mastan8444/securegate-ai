@@ -1,0 +1,73 @@
+version: '3.8'
+
+services:
+  db:
+    image: mysql:8.0
+    container_name: securegate-db
+    environment:
+      MYSQL_DATABASE: securegate_ai
+      MYSQL_ROOT_PASSWORD: Akram@123
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    restart: always
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-pAkram@123"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: securegate-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: always
+
+  backend:
+    build: ./backend
+    container_name: securegate-backend
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:mysql://db:3306/securegate_ai?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=Akram@123
+      - SPRING_DATA_REDIS_HOST=redis
+      - SPRING_DATA_REDIS_PORT=6379
+      - SPRING_MAIL_HOST=smtp.gmail.com
+      - SPRING_MAIL_PORT=587
+      - SPRING_MAIL_USERNAME=mastan8957@gmail.com
+      - SPRING_MAIL_PASSWORD=klkfmahfficjrnwo
+      - SECUREGATE_ALERT_RECIPIENT_EMAIL=mastan8957@gmail.com
+      - SECUREGATE_GEOIP_DATABASE-PATH=/app/GeoLite2-Country.mmdb
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    restart: always
+
+  frontend:
+    build: ./frontend
+    container_name: securegate-frontend
+    depends_on:
+      - backend
+    restart: always
+
+  proxy:
+    image: nginx:alpine
+    container_name: securegate-proxy
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx-prod.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - frontend
+      - backend
+    restart: always
+
+volumes:
+  mysql_data:
+  redis_data:
