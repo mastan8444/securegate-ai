@@ -203,7 +203,7 @@ const RulesManager = () => {
                       control={
                         <Switch
                           checked={rule.enabled}
-                          onChange={() => handleRuleToggle(rule.ruleKey, rule.ruleValue, rule.isEnabled())}
+                          onChange={() => handleRuleToggle(rule.ruleKey, rule.ruleValue, rule.enabled)}
                           color="primary"
                         />
                       }

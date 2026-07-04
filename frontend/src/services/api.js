@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const API = axios.create({
-  baseURL: 'http://localhost:8080/api',
+  baseURL: '/api',
 });
 
 // Interceptor to inject JWT authorization header if present
