@@ -19,6 +19,8 @@ import SecurityIcon from '@mui/icons-material/Security';
 import SettingsIcon from '@mui/icons-material/Settings';
 import LogoutIcon from '@mui/icons-material/Logout';
 import ShieldIcon from '@mui/icons-material/Shield';
+import SpeedIcon from '@mui/icons-material/Speed';
+import RuleIcon from '@mui/icons-material/Rule';
 
 const Sidebar = () => {
   const { user, logout } = useAuth();
@@ -27,6 +29,8 @@ const Sidebar = () => {
 
   const menuItems = [
     { text: 'Dashboard', icon: <DashboardIcon />, path: '/' },
+    { text: 'Risk Engine', icon: <SpeedIcon />, path: '/risk-engine' },
+    { text: 'WAF Rules', icon: <RuleIcon />, path: '/waf-rules' },
     { text: 'Blacklist IP', icon: <BlockIcon />, path: '/blacklist' },
     { text: 'Whitelist IP', icon: <CheckCircleIcon />, path: '/whitelist' },
     { text: 'Attack Logs', icon: <SecurityIcon />, path: '/logs' },

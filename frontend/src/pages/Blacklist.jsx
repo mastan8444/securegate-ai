@@ -102,6 +102,8 @@ const Blacklist = () => {
         await API.delete(`/blacklist/${ip}`);
         fetchBlacklist();
       } catch (error) {
+        const errorMsg = error.response?.data?.message || 'Failed to unblock IP';
+        alert(errorMsg);
         console.error('Failed to unblock IP:', error);
       }
     }

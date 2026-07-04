@@ -15,6 +15,10 @@ const Header = () => {
     switch (location.pathname) {
       case '/':
         return 'Dashboard Analytics';
+      case '/risk-engine':
+        return 'Enterprise Risk Analysis Engine';
+      case '/waf-rules':
+        return 'Web Application Firewall (WAF) Rules';
       case '/blacklist':
         return 'IP Blacklist';
       case '/whitelist':

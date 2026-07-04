@@ -29,6 +29,9 @@ public class RuleService {
         seedRule(tenantId, "BLOCKED_COUNTRIES", "CN,RU,KP", "Comma-separated list of blocked ISO country codes (e.g. CN,RU,KP)", false);
         seedRule(tenantId, "EMAIL_ALERTS_ENABLED", "true", "Enable Gmail notifications for security blocks", true);
         seedRule(tenantId, "TEMP_BAN_DURATION_HOURS", "24", "Duration of temporary bans in hours", true);
+        seedRule(tenantId, "SUSPICIOUS_PATH_BLOCKING", "true", "Automatically ban IPs scanning sensitive system folders (e.g. /wp-admin, /.git, /actuator)", true);
+        seedRule(tenantId, "SUSPICIOUS_UA_BLOCKING", "true", "Automatically ban IPs sending requests using scanner User-Agents (e.g. sqlmap, nmap, nikto)", true);
+        seedRule(tenantId, "SCAN_ERROR_LIMIT_MIN", "15", "Maximum 404/403 errors allowed per minute from a single IP before blocking", true);
     }
 
     private void seedRule(String tenantId, String key, String defaultValue, String description, boolean enabled) {

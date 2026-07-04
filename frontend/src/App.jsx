@@ -10,6 +10,8 @@ import Blacklist from './pages/Blacklist';
 import Whitelist from './pages/Whitelist';
 import AttackLogs from './pages/AttackLogs';
 import RulesManager from './pages/RulesManager';
+import RiskEngineDashboard from './pages/RiskEngineDashboard';
+import RulesConfigurator from './pages/RulesConfigurator';
 
 // Material UI Dark Theme Config
 const darkTheme = createTheme({
@@ -142,6 +144,22 @@ function App() {
               element={
                 <ProtectedRoute>
                   <RulesManager />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/risk-engine"
+              element={
+                <ProtectedRoute>
+                  <RiskEngineDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/waf-rules"
+              element={
+                <ProtectedRoute>
+                  <RulesConfigurator />
                 </ProtectedRoute>
               }
             />

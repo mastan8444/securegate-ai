@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.*;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/blacklist")
@@ -82,6 +83,28 @@ public class BlacklistController {
         }
 
         String tenantId = getCurrentTenantId();
+        
+        // 1. Resolve current user entity
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        User currentUser = userRepository.findByUsername(username).orElse(null);
+
+        // 2. Check if the IP is permanently blocked
+        Optional<BlacklistIP> blacklistEntry = blacklistRepository.findByTenantIdAndIpAddress(tenantId, ip);
+        if (blacklistEntry.isPresent()) {
+            BlacklistIP entry = blacklistEntry.get();
+            if ("PERMANENT".equals(entry.getStatus())) {
+                boolean isSuperAdmin = currentUser != null && "ROLE_SUPER_ADMIN".equals(currentUser.getRole());
+                boolean isSystemTenant = "system".equals(tenantId);
+                
+                if (!isSuperAdmin && !isSystemTenant) {
+                    return ResponseEntity.status(org.springframework.http.HttpStatus.FORBIDDEN).body(Map.of(
+                        "error", "Forbidden",
+                        "message", "Only SecureGate AI Platform super-administrators can unblock permanently blacklisted IPs. Contact support."
+                    ));
+                }
+            }
+        }
+
         decisionEngine.unblockIP(tenantId, ip);
         return ResponseEntity.ok(Map.of("message", "IP unblocked successfully", "ip", ip));
     }

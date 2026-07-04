@@ -19,10 +19,14 @@ public class SecurityGatewayController {
 
     private final DecisionEngine decisionEngine;
     private final TenantRepository tenantRepository;
+    private final com.securegate.ai.service.RiskEngineService riskEngineService;
+    private final com.securegate.ai.repository.BlacklistRepository blacklistRepository;
 
-    public SecurityGatewayController(DecisionEngine decisionEngine, TenantRepository tenantRepository) {
+    public SecurityGatewayController(DecisionEngine decisionEngine, TenantRepository tenantRepository, com.securegate.ai.service.RiskEngineService riskEngineService, com.securegate.ai.repository.BlacklistRepository blacklistRepository) {
         this.decisionEngine = decisionEngine;
         this.tenantRepository = tenantRepository;
+        this.riskEngineService = riskEngineService;
+        this.blacklistRepository = blacklistRepository;
     }
 
     /**
@@ -59,7 +63,25 @@ public class SecurityGatewayController {
                     .body(new AccessDecision(false, "BLOCKED", "DDoS attack detected: too many requests per minute"));
         }
 
-        AccessDecision decision = decisionEngine.checkAccess(tenantId, ip);
+        // Build visitor WAF threat metadata
+        com.securegate.ai.dto.VisitorMetadata metadata = new com.securegate.ai.dto.VisitorMetadata();
+        metadata.setPath(request.getHeader("X-Visitor-Path"));
+        metadata.setUserAgent(request.getHeader("X-Visitor-User-Agent"));
+        metadata.setDeviceFingerprint(request.getHeader("X-Visitor-Fingerprint"));
+        metadata.setCookieReputation(request.getHeader("X-Visitor-Cookie"));
+        metadata.setJwtToken(request.getHeader("Authorization"));
+        metadata.setUsername(request.getParameter("username"));
+        metadata.setPassword(request.getParameter("password"));
+
+        // Evaluate risk decision
+        com.securegate.ai.dto.RiskDecision riskDecision = riskEngineService.evaluate(tenantId, ip, metadata);
+
+        AccessDecision decision = new AccessDecision(
+            riskDecision.isAllowed(),
+            riskDecision.getAction(),
+            riskDecision.getReason()
+        );
+
         if (decision.allowed()) {
             return ResponseEntity.ok(decision);
         } else {
@@ -76,6 +98,28 @@ public class SecurityGatewayController {
             HttpServletRequest request) {
         String clientIp = request.getRemoteAddr();
         return checkAccessForIp(clientIp, paramApiKey, request);
+    }
+
+    @PostMapping("/check/reset")
+    public ResponseEntity<?> resetIpCounter(@RequestBody Map<String, String> body) {
+        String ip = body.get("ip");
+        String apiKey = body.get("apiKey");
+
+        if (ip == null || ip.isBlank()) {
+            return ResponseEntity.badRequest().body("ip is required");
+        }
+
+        String tenantId = RuleService.DEFAULT_TENANT_ID;
+        if (apiKey != null && !apiKey.isBlank()) {
+            Optional<Tenant> tenant = tenantRepository.findByApiKey(apiKey);
+            if (tenant.isEmpty()) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid API Key");
+            }
+            tenantId = tenant.get().getId();
+        }
+
+        decisionEngine.resetFailedLogins(tenantId, ip);
+        return ResponseEntity.ok(Map.of("message", "IP failed login counter reset successfully", "ip", ip));
     }
 
     /**
@@ -152,5 +196,48 @@ public class SecurityGatewayController {
                 "currentStatus", decision.status(),
                 "reason", decision.reason()
         ));
+    }
+
+    @GetMapping("/check/blacklist")
+    public ResponseEntity<?> getTenantBlacklist(@RequestParam("apiKey") String apiKey) {
+        if (apiKey == null || apiKey.isBlank()) {
+            return ResponseEntity.badRequest().body("apiKey is required");
+        }
+        Optional<Tenant> tenant = tenantRepository.findByApiKey(apiKey);
+        if (tenant.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid API Key");
+        }
+        String tenantId = tenant.get().getId();
+        return ResponseEntity.ok(blacklistRepository.findAllByTenantId(tenantId));
+    }
+
+    @PostMapping("/check/unblock")
+    public ResponseEntity<?> unblockTenantIp(@RequestBody Map<String, String> body) {
+        String ip = body.get("ip");
+        String apiKey = body.get("apiKey");
+
+        if (ip == null || ip.isBlank() || apiKey == null || apiKey.isBlank()) {
+            return ResponseEntity.badRequest().body("ip and apiKey are required");
+        }
+
+        Optional<Tenant> tenant = tenantRepository.findByApiKey(apiKey);
+        if (tenant.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid API Key");
+        }
+        String tenantId = tenant.get().getId();
+
+        // Enforce restriction: cannot unblock PERMANENT blocks via client unblock portal
+        Optional<com.securegate.ai.entity.BlacklistIP> blacklistEntry = blacklistRepository.findByTenantIdAndIpAddress(tenantId, ip);
+        if (blacklistEntry.isPresent()) {
+            if ("PERMANENT".equals(blacklistEntry.get().getStatus())) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of(
+                    "error", "Forbidden",
+                    "message", "Only SecureGate AI Platform super-administrators can unblock permanently blacklisted IPs. Contact support."
+                ));
+            }
+        }
+
+        decisionEngine.unblockIP(tenantId, ip);
+        return ResponseEntity.ok(Map.of("message", "IP unblocked successfully", "ip", ip));
     }
 }

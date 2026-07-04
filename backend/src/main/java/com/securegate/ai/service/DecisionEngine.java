@@ -258,6 +258,10 @@ public class DecisionEngine {
         failedAttemptsCache.remove(tenantId + ":" + ip);
     }
 
+    public int getFailedAttempts(String tenantId, String ip) {
+        return failedAttemptsCache.getOrDefault(tenantId + ":" + ip, 0);
+    }
+
     /**
      * Registers an HTTP request to check and prevent DDoS attacks.
      * Returns true if allowed, false if blocked due to DDoS detection.
@@ -386,6 +390,45 @@ public class DecisionEngine {
         whitelistCache.remove(tenantId + ":" + ip);
         whitelistRepository.findByTenantIdAndIpAddress(tenantId, ip).ifPresent(whitelistRepository::delete);
         System.out.println("IP " + ip + " removed from whitelist for tenant: " + tenantId);
+    }
+
+    public AccessDecision evaluateVisitorThreat(String tenantId, String ip, String userAgent, String path) {
+        // 1. Whitelist Check (always wins)
+        if (isWhitelisted(tenantId, ip)) {
+            return new AccessDecision(true, "ALLOWED", "IP is whitelisted");
+        }
+        
+        // 2. Blacklist Check
+        if (isBlacklisted(tenantId, ip)) {
+            return checkAccess(tenantId, ip);
+        }
+
+        String country = geolocationService.resolveCountry(ip);
+
+        // 3. User-Agent Scanner Detection
+        if (ruleService.getBooleanRule(tenantId, "SUSPICIOUS_UA_BLOCKING", true) && userAgent != null) {
+            String uaLower = userAgent.toLowerCase();
+            if (uaLower.contains("sqlmap") || uaLower.contains("nmap") || uaLower.contains("nikto") || uaLower.contains("dirbuster") || uaLower.contains("w3af")) {
+                String reason = "Suspicious User-Agent detected: " + userAgent;
+                blockIP(tenantId, ip, reason, "PERMANENT", null);
+                logAttack(tenantId, ip, "SCANNER_DETECTION", "BLOCKED", country, reason);
+                return new AccessDecision(false, "BLOCKED", reason);
+            }
+        }
+
+        // 4. Suspicious Admin Path Scanning Detection
+        if (ruleService.getBooleanRule(tenantId, "SUSPICIOUS_PATH_BLOCKING", true) && path != null) {
+            String pathLower = path.toLowerCase();
+            if (pathLower.contains("/wp-admin") || pathLower.contains("/.git") || pathLower.contains("/actuator") || pathLower.contains("/etc/passwd") || pathLower.contains("/config.json")) {
+                String reason = "Suspicious path access attempt: " + path;
+                blockIP(tenantId, ip, reason, "PERMANENT", null);
+                logAttack(tenantId, ip, "PATH_SCAN_DETECTION", "BLOCKED", country, reason);
+                return new AccessDecision(false, "BLOCKED", reason);
+            }
+        }
+
+        // 5. Default rules
+        return checkAccess(tenantId, ip);
     }
 
     private void logAttack(String tenantId, String ip, String eventType, String actionTaken, String country, String reason) {

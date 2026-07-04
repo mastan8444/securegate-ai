@@ -18,6 +18,8 @@ public interface AttackLogRepository extends JpaRepository<AttackLog, Long> {
 
     long countByTenantId(String tenantId);
 
+    long countByTenantIdAndIp(String tenantId, String ip);
+
     @Query("SELECT a.ip, COUNT(a.ip) as cnt FROM AttackLog a WHERE a.tenantId = :tenantId GROUP BY a.ip ORDER BY cnt DESC")
     List<Object[]> findTopAttackers(@Param("tenantId") String tenantId, Pageable pageable);
 
