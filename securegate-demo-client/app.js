@@ -47,9 +47,9 @@ app.use(async (req, res, next) => {
         return next();
     }
 
-    let visitorIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+    let visitorIp = req.query.ip || req.headers['x-forwarded-for'] || req.socket.remoteAddress;
     if (visitorIp === "::1" || visitorIp === "127.0.0.1" || visitorIp === "::ffff:127.0.0.1") {
-        visitorIp = req.query.ip || "192.168.1.99";
+        visitorIp = "192.168.1.99";
     }
 
     req.visitorIp = visitorIp;
