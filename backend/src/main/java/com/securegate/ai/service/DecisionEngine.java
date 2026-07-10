@@ -202,6 +202,9 @@ public class DecisionEngine {
      * Checks if an IP is blacklisted for a tenant.
      */
     public boolean isBlacklisted(String tenantId, String ip) {
+        if (ip == null || "127.0.0.1".equals(ip) || "0:0:0:0:0:0:0:1".equals(ip) || "::1".equals(ip) || ip.contains("127.0.0.1") || ip.contains("::1")) {
+            return false;
+        }
         if (redisAvailable) {
             try {
                 Boolean member = redisTemplate.opsForSet().isMember("securegate:tenant:" + tenantId + ":blacklist", ip);
