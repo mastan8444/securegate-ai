@@ -9,13 +9,13 @@ import java.util.Map;
 @RestController
 public class HomeController {
 
-    @GetMapping("/")
+    @GetMapping("/api/status")
     public ResponseEntity<?> getStatus() {
         return ResponseEntity.ok(Map.of(
                 "platform", "SecureGate AI Smart Security Gateway",
                 "status", "UP & ACTIVE",
                 "message", "Gateway protection engine is fully operational.",
-                "dashboardUrl", "http://localhost:5173",
+                "dashboardUrl", "http://localhost:8080",
                 "securityCheckEndpoint", "GET /api/check/{ip}"
         ));
     }
